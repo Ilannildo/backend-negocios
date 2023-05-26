@@ -1,0 +1,278 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String           @id @default(uuid())
+  name                 String           @db.VarChar(150)
+  email                String           @unique(map: "email")
+  phone                String?          @db.VarChar(32)
+  role_id              String
+  step_register        Int              @default(1)
+  is_active            Boolean          @default(false)
+  type_company         UserCompanyType  @default(company)
+  verify_register      Boolean          @default(false)
+  email_verificated_at DateTime?
+  password             String
+  remember_token       String?
+  accepted_terms       Boolean          @default(true)
+  date_accept_terms    DateTime?
+  created_at           DateTime         @default(now())
+  updated_at           DateTime         @updatedAt
+  deleted_at           DateTime?
+  role                 Role             @relation(fields: [role_id], references: [id]) // old type
+  company              Company?
+  created_demand       Demand[]
+  applied_demands      DemandHasBuyer[]
+
+  @@map("users")
+}
+
+model Role {
+  id            String   @id @default(uuid())
+  name          String   @db.VarChar(150)
+  register_user Boolean  @default(false)
+  delete_user   Boolean  @default(false)
+  edit_user     Boolean  @default(false)
+  view_user     Boolean  @default(false)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  users         User[]
+
+  @@map("roles")
+}
+
+model Company {
+  id                          String               @id @default(uuid())
+  document                    String?              @unique(map: "document")
+  company_name                String
+  trading_name                String
+  cnae                        String?
+  revenue                     String?
+  type_port                   String?
+  type                        Int
+  company_type                CompanyType          @default(common)
+  company_interest            Json?
+  phone_company               String?
+  email_company               String?              @unique(map: "email_company")
+  status_payment              Boolean              @default(false)
+  first_login                 Boolean              @default(false)
+  presentation_file           String?
+  presentation_url            String?
+  attachment_url              String?
+  attachment_file             String?
+  service_region              String?
+  average_revenue             Float?
+  collaborators               Int?
+  type_establishment          String?
+  main_client                 String?
+  main_equipment              String?
+  photo_company               String?
+  photo_company_main          String?
+  photo_company_default_first String?
+  presentation_file_photo     String?
+  company_website             String?
+  company_evaluation          String?
+  tag_type                    String?
+  linkedin                    String?
+  facebook                    String?
+  instagram                   String?
+  share_capital               Float?
+  contact_name                String?
+  created_at                  DateTime             @default(now())
+  updated_at                  DateTime             @updatedAt
+  deleted_at                  DateTime?
+  user_id                     String               @unique
+  address                     CompanyHasAddress?
+  user                        User                 @relation(fields: [user_id], references: [id])
+  categories                  CompanyHasCategory[]
+  invoices                    CompanyInvoice[]
+
+  @@map("companies")
+}
+
+model Demand {
+  id                 String               @id @default(uuid())
+  title              String
+  annotations        String               @db.LongText
+  deadline           DateTime
+  city_id            String
+  created_by_user_id String
+  category_id        String
+  subcategory_id     String
+  status             Boolean              @default(true)
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  deleted_at         DateTime?
+  deleted_reason     String?
+  file_url           String?
+  file_name          String?
+  validated          Boolean              @default(true)
+  city               City                 @relation(fields: [city_id], references: [id])
+  created_by_user    User                 @relation(fields: [created_by_user_id], references: [id])
+  subcategory        Subcategory          @relation(fields: [subcategory_id], references: [id])
+  category           Category             @relation(fields: [category_id], references: [id])
+  buyer              DemandHasBuyer?
+  maintainer         DemandHasMaintainer?
+
+  @@map("demands")
+}
+
+model DemandHasBuyer {
+  demand_id String @unique
+  buyer_id  String
+  buyer     User   @relation(fields: [buyer_id], references: [id])
+  demand    Demand @relation(fields: [demand_id], references: [id])
+
+  @@id([demand_id, buyer_id])
+  @@map("demands_has_buyers")
+}
+
+model DemandHasMaintainer {
+  demand_id     String   @unique
+  maintainer_id String
+  maintainer    Industry @relation(fields: [maintainer_id], references: [id])
+  demand        Demand   @relation(fields: [demand_id], references: [id])
+
+  @@id([demand_id, maintainer_id])
+  @@map("demands_has_maintainers")
+}
+
+model Address {
+  id            String             @id @default(uuid())
+  region        String             @db.VarChar(150)
+  address       String             @db.VarChar(150)
+  complement    String?            @db.VarChar(150)
+  number        String?            @db.VarChar(150)
+  other_regions String?
+  neighborhood  String?            @db.VarChar(150)
+  city_id       String
+  created_at    DateTime           @default(now())
+  updated_at    DateTime           @updatedAt
+  city          City               @relation(fields: [city_id], references: [id])
+  company       CompanyHasAddress?
+
+  @@map("addresses")
+}
+
+model CompanyHasAddress {
+  company_id String  @unique
+  address_id String  @unique
+  address    Address @relation(fields: [address_id], references: [id])
+  company    Company @relation(fields: [company_id], references: [id])
+
+  @@id([company_id, address_id])
+  @@map("companies_has_addresses")
+}
+
+model CompanyHasCategory {
+  id             String          @id @default(uuid())
+  company_id     String
+  category_id    String
+  subcategory_id String
+  type_action    Int?
+  type_company   UserCompanyType
+  category       Category        @relation(fields: [category_id], references: [id])
+  subcategory    Subcategory     @relation(fields: [subcategory_id], references: [id])
+  company        Company         @relation(fields: [company_id], references: [id])
+
+  @@map("companies_has_categories")
+}
+
+model Category {
+  id            String               @id @default(uuid())
+  name          String               @db.VarChar(150)
+  is_active     Boolean              @default(true)
+  created_at    DateTime             @default(now())
+  updated_at    DateTime             @updatedAt
+  subcategories Subcategory[]
+  companies     CompanyHasCategory[]
+  demands       Demand[]
+
+  @@map("categories")
+}
+
+model CompanyInvoice {
+  id            String   @id @default(uuid())
+  company_id    String
+  purchase_date DateTime
+  renewal_date  DateTime
+  payment_type  String?
+  value         Float
+  is_active     Boolean  @default(false)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  company       Company  @relation(fields: [company_id], references: [id])
+
+  @@map("companies_invoices")
+}
+
+model Industry {
+  id           String                @id @default(uuid())
+  company_name String                @db.VarChar(150)
+  email        String                @unique(map: "email") @db.VarChar(150)
+  is_active    Boolean               @default(true)
+  created_at   DateTime              @default(now())
+  updated_at   DateTime              @updatedAt
+  demands      DemandHasMaintainer[]
+
+  @@map("industries")
+}
+
+model Subcategory {
+  id          String               @id @default(uuid())
+  name        String               @db.VarChar(150)
+  category_id String
+  created_at  DateTime             @default(now())
+  updated_at  DateTime             @updatedAt
+  category    Category             @relation(fields: [category_id], references: [id])
+  companies   CompanyHasCategory[]
+  demands     Demand[]
+
+  @@map("subcategories")
+}
+
+model State {
+  id         String   @id @default(uuid())
+  name       String   @db.VarChar(150)
+  uf         String   @db.VarChar(2)
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  cities     City[]
+
+  @@map("states")
+}
+
+model City {
+  id         String    @id @default(uuid())
+  name       String    @db.VarChar(150)
+  zipcode    String    @db.VarChar(8)
+  is_active  Boolean   @default(true)
+  state_id   String
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  state      State     @relation(fields: [state_id], references: [id])
+  addresses  Address[]
+  demands    Demand[]
+
+  @@map("cities")
+}
+
+enum UserCompanyType {
+  company
+  industry
+}
+
+enum CompanyType {
+  common
+  approved
+}
